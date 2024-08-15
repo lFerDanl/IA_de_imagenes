@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp,container-queries"></script>
+    <title>Clasificación de Imágenes</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-layers"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #image {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            width: 300px; /* Ajusta el tamaño deseado aquí */
+            height: 300px; /* Mantiene la proporción cuadrada */
+            object-fit: cover; /* Asegura que la imagen se ajuste al contenedor */
+            display: block;
+            margin: 0 auto;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-2xl font-bold mb-4">Clasificador de Imágenes de Mascotas</h1>
+        <input type="file" id="upload" class="mb-4" />
+        <br>
+        <img id="image" />
+        <br>
+        <button onclick="predict()">Predecir</button>
+        <h3 id="result" class="mt-4 text-xl font-semibold"></h3>
+    </div>
+
+    <script>
+        let model;
+
+        async function loadModel() {
+            model = await tf.loadLayersModel('IA_de_imagenes/model.json');
+            console.log('Modelo cargado');
+        }
+
+        loadModel();
+
+        document.getElementById('upload').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const imgElement = document.getElementById('image');
+                imgElement.src = e.target.result;
+                imgElement.onload = function () {
+                    const tensor = tf.browser.fromPixels(imgElement)
+                        .resizeNearestNeighbor([100, 100])
+                        .toFloat()
+                        .expandDims(0)
+                        .div(tf.scalar(255));
+                    window.currentImage = tensor;
+                }
+            }
+
+            reader.readAsDataURL(file);
+        });
+
+        async function predict() {
+            if (!model) {
+                alert('Modelo no cargado aún');
+                return;
+            }
+
+            const tensor = window.currentImage;
+            const predictions = await model.predict(tensor).data();
+            const topPrediction = predictions.indexOf(Math.max(...predictions));
+            document.getElementById('result').innerText = `Predicción: Clase ${topPrediction}`;
+        }
+    </script>
+</body>
+</html>
